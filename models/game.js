@@ -9,7 +9,7 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       game.hasMany(models.player, { foreignKey: "gameId" });
-      game.hasOne(models.deck, { foreignKey: "gameId" });
+      game.hasOne(models.deck);
     }
   }
   game.init(

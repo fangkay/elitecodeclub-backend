@@ -9,8 +9,8 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       player.belongsTo(models.game, { foreignKey: "gameId" });
-      player.hasOne(models.money, { foreignKey: "playerId" });
-      player.hasOne(models.score, { foreignKey: "playerId" });
+      player.hasOne(models.money);
+      player.hasOne(models.score);
     }
   }
   player.init(

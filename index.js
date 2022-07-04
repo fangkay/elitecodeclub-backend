@@ -3,8 +3,11 @@ const app = express();
 const http = require("http");
 const { Server } = require("socket.io");
 const cors = require("cors");
+const gameRouter = require("./routes/game");
 
 app.use(cors());
+app.use(express.json());
+app.use("/game", gameRouter);
 
 const server = http.createServer(app);
 
