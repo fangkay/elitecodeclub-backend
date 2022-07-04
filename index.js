@@ -1,4 +1,3 @@
-const { instrument } = require("@socket.io/admin-ui");
 const express = require("express");
 const app = express();
 const http = require("http");
@@ -27,5 +26,3 @@ io.on("connection", (socket) => {
 server.listen(3001, () => {
   console.log("Server is running");
 });
-
-instrument(io, { auth: false });
