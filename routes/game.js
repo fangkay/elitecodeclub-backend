@@ -5,7 +5,6 @@ const Game = require("../models").game;
 
 gameRouter.get("", async (request, response, next) => {
   try {
-    // response.send("test");
     const getPlayers = await Player.findAll();
     response.status(200).send(getPlayers);
   } catch (e) {
@@ -16,9 +15,8 @@ gameRouter.get("", async (request, response, next) => {
 
 gameRouter.post("", async (request, response, next) => {
   try {
-    const { id, name } = request.body;
+    const { name } = request.body;
     const createGame = await Game.create({
-      id,
       name,
       turn: 0,
     });
