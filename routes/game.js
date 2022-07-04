@@ -5,8 +5,8 @@ const Game = require("../models").game;
 
 gameRouter.get("", async (request, response, next) => {
   try {
-    const getPlayers = await Player.findAll();
-    response.status(200).send(getPlayers);
+    const getGames = await Game.findAll({ include: Player });
+    response.status(200).send(getGames);
   } catch (e) {
     console.log(e.message);
     next(e);
