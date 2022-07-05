@@ -7,7 +7,6 @@ const gameRouter = require("./routes/game");
 
 app.use(cors());
 app.use(express.json());
-app.use("/game", gameRouter);
 
 const server = http.createServer(app);
 
@@ -22,10 +21,22 @@ io.on("connection", (socket) => {
   console.log(`User connected ${socket.id}`);
 
   socket.on("join_room", (data) => {
+    console.log("data to join", data);
     socket.join(data);
+
+    // IMPORTANT: updating user table with game id
+
     console.log(`User with ID: ${socket.id} joined room: ${data}`);
   });
 });
+
+// attach socket
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
+
+app.use("/game", gameRouter);
 
 server.listen(3001, () => {
   console.log("Server is running");
