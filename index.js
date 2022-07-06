@@ -4,6 +4,7 @@ const http = require("http");
 const { Server } = require("socket.io");
 const cors = require("cors");
 const gameRouter = require("./routes/game");
+const userRouter = require("./routes/user");
 
 app.use(cors());
 app.use(express.json());
@@ -37,6 +38,7 @@ app.use((req, res, next) => {
 });
 
 app.use("/game", gameRouter);
+app.use("/user", userRouter);
 
 server.listen(3001, () => {
   console.log("Server is running");

@@ -8,7 +8,7 @@ const Score = require("../models").score;
 const {
   initialMoney,
   initialScore,
-  initalDeck,
+  initialDeck,
 } = require("../config/constants");
 
 gameRouter.get("/", async (request, response, next) => {
@@ -28,7 +28,8 @@ gameRouter.post("", async (request, response, next) => {
       name,
       turn: 0,
     });
-    response.send(createGame);
+    const fullGame = { ...createGame.dataValues, players: [] };
+    response.send(fullGame);
   } catch (e) {
     console.log(e.message);
     next(e);
@@ -91,7 +92,7 @@ gameRouter.post("/start", async (req, res, next) => {
 
     // 3. Generate a clean deck for this gameId
     const deck = await Deck.create({
-      ...initalDeck,
+      ...initialDeck,
       gameId,
     });
 
