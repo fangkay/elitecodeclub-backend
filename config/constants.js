@@ -31,7 +31,7 @@ const initialScore = {
   discardPoints: false,
 };
 
-const initalDeck = {
+const initialDeck = {
   1: true,
   2: true,
   3: true,
@@ -50,4 +50,4 @@ const initalDeck = {
   discardPoints: true,
 };
 
-module.exports = { initialMoney, initialScore, initalDeck };
+module.exports = { initialMoney, initialScore, initialDeck };

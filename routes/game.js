@@ -48,7 +48,7 @@ gameRouter.get("/:id", async (req, res, next) => {
   try {
     const id = parseInt(req.params.id);
     const getGameById = await Game.findByPk(id, {
-      include: [Player, Deck],
+      include: [Player],
     });
     // const state = await buildGameState(req.params.id);
 
@@ -120,7 +120,7 @@ const buildGameState = async (gameId) => {
     });
 
     const formattedPlayers = game.players.reduce((acc, p) => {
-      return { ...acc, [p.id]: p };
+      return { ...acc, [p.username]: p };
     }, {});
 
     const deck = await Deck.findOne({ where: { gameId } });
