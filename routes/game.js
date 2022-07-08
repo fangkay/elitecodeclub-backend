@@ -112,7 +112,7 @@ gameRouter.post("/start", async (req, res, next) => {
   }
 });
 
-const buildGameState = async (gameId) => {
+const buildGameState = async (gameId, currentTurns, pass) => {
   try {
     console.log("--------- new game ------------");
     const game = await Game.findByPk(gameId, {
@@ -125,16 +125,56 @@ const buildGameState = async (gameId) => {
 
     const deck = await Deck.findOne({ where: { gameId } });
 
+    const players = game.players;
+
+    let turns;
+    if (!currentTurns) {
+      const turnArray = players.map((p) => ({
+        username: p.username,
+        passed: false,
+      }));
+      turns = [...turnArray].sort((a, b) => Math.random() - 0.5);
+    } else {
+      const currentPlayer = currentTurns.shift();
+
+      const updated = { ...currentPlayer, passed: pass };
+
+      turns = [...currentTurns, updated];
+    }
+
     const gameState = {
       name: game.name,
       players: formattedPlayers,
       deck,
+      turn: turns,
     };
+
+    console.log("in build function", gameState);
 
     return gameState;
   } catch (e) {
     console.log("some error building state", e.message);
   }
 };
+
+gameRouter.patch("/pass", async (request, response, next) => {
+  try {
+    const { turns, gameId } = request.body;
+
+    // const updatedTurns = turns.map(t => t.username === username ? { ...t, passed: true } : t);
+
+    const gameState = await buildGameState(gameId, turns, true);
+
+    console.log("gamestate in pass route", gameState);
+
+    request.io.to(parseInt(gameId)).emit("gamestate", gameState);
+
+    response.send("passed");
+  } catch (e) {
+    next(e);
+  }
+  // obj:
+  // send updated turns
+});
 
 module.exports = gameRouter;
