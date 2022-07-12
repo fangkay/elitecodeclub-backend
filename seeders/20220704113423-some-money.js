@@ -18,8 +18,6 @@ module.exports = {
           15000: true,
           20000: true,
           25000: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
         },
         {
           playerId: 2,
@@ -34,8 +32,6 @@ module.exports = {
           15000: true,
           20000: true,
           25000: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
         },
         {
           playerId: 3,
@@ -50,8 +46,6 @@ module.exports = {
           15000: true,
           20000: true,
           25000: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
         },
         {
           playerId: 4,
@@ -66,8 +60,6 @@ module.exports = {
           15000: true,
           20000: true,
           25000: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
         },
         {
           playerId: 5,
@@ -82,8 +74,6 @@ module.exports = {
           15000: true,
           20000: true,
           25000: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
         },
       ],
       {}

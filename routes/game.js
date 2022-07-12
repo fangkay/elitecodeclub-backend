@@ -21,12 +21,20 @@ gameRouter.get("/", async (request, response, next) => {
   }
 });
 
+gameRouter.get("/deck", async (req, res, next) => {
+  const deck = await Game.findByPk(7, {
+    include: [{ model: Player, include: [Score, Money] }],
+  });
+
+  console.log("is this plain???", deck.get({ plain: true }).players[0].money);
+  res.send(deck);
+});
+
 gameRouter.post("", async (request, response, next) => {
   try {
     const { name } = request.body;
     const createGame = await Game.create({
       name,
-      turn: 0,
     });
     const fullGame = { ...createGame.dataValues, players: [] };
     response.send(fullGame);
@@ -36,21 +44,12 @@ gameRouter.post("", async (request, response, next) => {
   }
 });
 
-gameRouter.post("/message", (request, response, next) => {
-  const { message, roomId } = request.body;
-  request.io.to(parseInt(roomId)).emit("some_message", { message });
-  console.log("do i have request.io", request.io);
-  console.log("message sent", roomId, message);
-  response.send("sent");
-});
-
 gameRouter.get("/:id", async (req, res, next) => {
   try {
     const id = parseInt(req.params.id);
     const getGameById = await Game.findByPk(id, {
       include: [Player],
     });
-    // const state = await buildGameState(req.params.id);
 
     res.status(200).send(getGameById);
   } catch (e) {
@@ -97,6 +96,7 @@ gameRouter.post("/start", async (req, res, next) => {
     });
 
     // 4. build game state
+
     const gameState = await buildGameState(gameId);
 
     console.log(moneyPromises, scorePromises, deck);
@@ -108,6 +108,7 @@ gameRouter.post("/start", async (req, res, next) => {
       gameState,
     });
   } catch (e) {
+    console.log(e.message);
     next(e);
   }
 });
@@ -115,38 +116,62 @@ gameRouter.post("/start", async (req, res, next) => {
 const buildGameState = async (gameId, currentTurns, pass) => {
   try {
     console.log("--------- new game ------------");
-    const game = await Game.findByPk(gameId, {
+    const sequelizeGame = await Game.findByPk(gameId, {
       include: [{ model: Player, include: [Score, Money] }],
     });
 
-    const formattedPlayers = game.players.reduce((acc, p) => {
-      return { ...acc, [p.username]: p };
+    const game = sequelizeGame.get({ plain: true });
+
+    const formattedPlayers2 = game.players.reduce((acc, p) => {
+      return {
+        ...acc,
+        [p.username]: {
+          ...p,
+          money: Object.keys(p.money).filter(
+            (m) => p.money[m] && m !== "id" && m !== "playerId"
+          ), // money: [10, 40, 100]
+          score: Object.keys(p.score).filter(
+            (m) => p.score[m] && m !== "id" && m !== "playerId"
+          ), // money: [10, 40, 100]
+        },
+      };
     }, {});
 
-    const deck = await Deck.findOne({ where: { gameId } });
+    console.log("NEW GAMESTATE VERSION!", formattedPlayers2["p2"].money);
 
+    const formattedPlayers = game.players.reduce((acc, p) => {
+      return { ...acc, [p.username]: p }; // { money: { 10: true, }, score: { 1: false, 2: true }}
+    }, {}); // { money: [10, 40, 100], score: [4] }
+
+    const bidsPerPlayer = game.players.reduce((acc, p) => {
+      return { ...acc, [p.username]: [] };
+    }, {});
+
+    // ---- get players, shuffle them and build new turns ---- //
     const players = game.players;
+    const turnArray = players.map((p) => ({
+      username: p.username,
+      passed: false,
+    }));
 
-    let turns;
-    if (!currentTurns) {
-      const turnArray = players.map((p) => ({
-        username: p.username,
-        passed: false,
-      }));
-      turns = [...turnArray].sort((a, b) => Math.random() - 0.5);
-    } else {
-      const currentPlayer = currentTurns.shift();
+    const turns = [...turnArray].sort((a, b) => Math.random() - 0.5);
 
-      const updated = { ...currentPlayer, passed: pass };
+    // Pick next VALID card from deck
+    const deck = await Deck.findOne({ where: { gameId }, raw: true });
+    const cardTypes = Object.keys(deck);
+    const validCards = cardTypes.filter((t) => deck[t] && t !== "id");
 
-      turns = [...currentTurns, updated];
-    }
+    const randomCard =
+      validCards[Math.floor(Math.random() * validCards.length)];
 
     const gameState = {
+      gameId,
       name: game.name,
-      players: formattedPlayers,
+      players: formattedPlayers2,
+      bids: bidsPerPlayer,
       deck,
-      turn: turns,
+      turns: turns,
+      currentCard: randomCard, // currentCard
     };
 
     console.log("in build function", gameState);
@@ -157,24 +182,121 @@ const buildGameState = async (gameId, currentTurns, pass) => {
   }
 };
 
-gameRouter.patch("/pass", async (request, response, next) => {
+gameRouter.patch("/bid", async (request, response, next) => {
   try {
-    const { turns, gameId } = request.body;
+    const { bidState } = request.body;
+    console.log("what is in the bidState?", bidState);
 
-    // const updatedTurns = turns.map(t => t.username === username ? { ...t, passed: true } : t);
+    // I get:
+    /*
+    {
+      bids: {
+        'username1': [10, 100, 200],
+        'username2': [50, 100, 200],
+        'username3': [],
+      },
+      currentCard: '8',
+      turns: [{ username: 'username1', passed: false }, { username: 'username1', passed: false }, { username: 'username1', passed: false }],
+      activeTurn: {
+        username: 'username2',
+        passed: false,
+      }
+    }
+    */
 
-    const gameState = await buildGameState(gameId, turns, true);
+    // ---- shift and update passed -------------- //
+    const currentTurns = bidState.turns; // [{username: "name", passed: false}, {username: "name", passed: false}, ...]
 
-    console.log("gamestate in pass route", gameState);
+    const activeTurn = bidState.activeTurn; // {passed: true, username: "name", }
 
-    request.io.to(parseInt(gameId)).emit("gamestate", gameState);
+    const currentPlayer = currentTurns.shift(); // Gets the first object of the currentTurns array
 
-    response.send("passed");
+    const updated = { ...currentPlayer, passed: activeTurn.passed }; // Set first player passed value to 'true'
+
+    const updatedTurns = [...currentTurns, updated]; // Return new array with the updated passed value
+    // ------------------------------------------------ //
+
+    const turnsCheck = [...updatedTurns];
+    const nextPlayer = turnsCheck.shift();
+
+    // end of round condition: TO-DO, NOT FINISHED
+    const gameId = bidState.gameId;
+    if (!nextPlayer.passed && turnsCheck.every((p) => p.passed)) {
+      // next player hasn't passed, all the rest did => round finished, he gets the card.
+      // request.io.to(roomId).send("new-round", {})
+
+      // 1. remove card from the deck.
+      const currentCard = bidState.currentCard;
+
+      const disableCard = await Deck.update(
+        {
+          [currentCard]: false,
+        },
+        { where: { gameId } }
+      );
+
+      // ----- CARD REMOVED ------ //
+
+      // ----  2. take money away from player ---- //
+
+      // who is he
+      const winnerName = nextPlayer.username;
+
+      const winner = await Player.findOne({
+        where: {
+          username: winnerName,
+          gameId,
+        },
+      });
+      const winnerId = winner.id;
+
+      console.log("what playerId is this?", winnerId);
+
+      const winnerMoney = await Money.findOne({
+        where: { playerId: winnerId },
+      });
+
+      const winnerBid = bidState.bids[winnerName]; // [10, 200]
+
+      console.log("what is playerBid", winnerBid);
+
+      const valuesToUpdate = winnerBid.reduce(
+        (acc, m) => ({ ...acc, [m]: false }), // { 10: false, 200: false }
+        {}
+      );
+
+      const updatePlayerMoney = await winnerMoney.update(valuesToUpdate);
+
+      console.log("what is this players Money?", updatePlayerMoney);
+
+      // ----  Money removed ---- //
+
+      // 3. give card to player (score table)
+      const addCardToPlayer = await Score.update(
+        {
+          [currentCard]: true,
+        },
+        {
+          where: { playerId: winnerId },
+        }
+      );
+
+      // 5. build new game state and start again
+      const nextRoundState = await buildGameState(gameId);
+      request.io.to(parseInt(gameId)).emit("gamestate", nextRoundState);
+    } else {
+      const toUpdate = {
+        bids: bidState.bids,
+        turns: updatedTurns,
+      };
+
+      request.io.to(parseInt(gameId)).emit("new-bid", toUpdate);
+    }
+
+    response.send("bid accepted");
   } catch (e) {
-    next(e);
+    console.log(e.message);
   }
-  // obj:
-  // send updated turns
 });
 
 module.exports = gameRouter;
