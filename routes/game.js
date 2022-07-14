@@ -37,6 +37,7 @@ gameRouter.post("", async (request, response, next) => {
       name,
     });
     const fullGame = { ...createGame.dataValues, players: [] };
+    request.io.emit("new-game", fullGame);
     response.send(fullGame);
   } catch (e) {
     console.log(e.message);
@@ -113,6 +114,22 @@ gameRouter.post("/start", async (req, res, next) => {
   }
 });
 
+// Calculate the total amount of money of each player
+// const calculateScore = async (players) => {
+//   try {
+//     const playerNames = Object.keys(players)
+//     playerNames.map((player) => {
+//       players[player].money.map((m) => {
+//         return const playerMoney = m.reduce((val1, val2) => val1 + val2, 0);
+//
+//       })
+//     })
+
+//   } catch (e) {
+//     console.log(e.message)
+//   }
+// }
+
 const buildGameState = async (gameId, currentTurns, pass) => {
   try {
     console.log("--------- new game ------------");
@@ -137,7 +154,7 @@ const buildGameState = async (gameId, currentTurns, pass) => {
       };
     }, {});
 
-    console.log("NEW GAMESTATE VERSION!", formattedPlayers2["p2"].money);
+    // console.log("NEW GAMESTATE VERSION!", formattedPlayers2["p2"].money);
 
     const formattedPlayers = game.players.reduce((acc, p) => {
       return { ...acc, [p.username]: p }; // { money: { 10: true, }, score: { 1: false, 2: true }}
@@ -164,6 +181,32 @@ const buildGameState = async (gameId, currentTurns, pass) => {
     const randomCard =
       validCards[Math.floor(Math.random() * validCards.length)];
 
+    // Create a new array to store all the special cards
+    // If the length of this array is 4 the game should end
+
+    // const specialCards = (randomCard) => {
+    //   if (randomCard === "divide" || randomCard.includes("multiply")) {
+    //     const cardsArray = [...cardsArray, randomCard];
+    //     console.log("what is cardsArray", cardsArray);
+    //     if (cardsArray.length === 4) {
+    //       console.log("the game has ended")
+    //     }
+    //   }
+    // };
+
+    // Get all the special cards values <--- This probably doesn't work because the value of the card is only going to be set to false after someone won that card
+
+    // const specialCards = (({
+    //   divide,
+    //   multiplyFirst,
+    //   multiplySecond,
+    //   multiplyThird,
+    // }) => ({ divide, multiplyFirst, multiplySecond, multiplyThird }))(deck);
+
+    // console.log("are these all specialCards?", specialCards); // {divide: true, multiplyFirst:true, multiplySecond: false, ...}
+
+    // const getSpecialCardsValue = Object.values(specialCards); // returns [true, true, false, true]
+
     const gameState = {
       gameId,
       name: game.name,
@@ -171,7 +214,7 @@ const buildGameState = async (gameId, currentTurns, pass) => {
       bids: bidsPerPlayer,
       deck,
       turns: turns,
-      currentCard: randomCard, // currentCard
+      currentCard: randomCard,
     };
 
     console.log("in build function", gameState);
@@ -186,23 +229,6 @@ gameRouter.patch("/bid", async (request, response, next) => {
   try {
     const { bidState } = request.body;
     console.log("what is in the bidState?", bidState);
-
-    // I get:
-    /*
-    {
-      bids: {
-        'username1': [10, 100, 200],
-        'username2': [50, 100, 200],
-        'username3': [],
-      },
-      currentCard: '8',
-      turns: [{ username: 'username1', passed: false }, { username: 'username1', passed: false }, { username: 'username1', passed: false }],
-      activeTurn: {
-        username: 'username2',
-        passed: false,
-      }
-    }
-    */
 
     // ---- shift and update passed -------------- //
     const currentTurns = bidState.turns; // [{username: "name", passed: false}, {username: "name", passed: false}, ...]
