@@ -10,6 +10,7 @@ const {
   initialScore,
   initialDeck,
 } = require("../config/constants");
+const score = require("../models/score");
 
 gameRouter.get("/", async (request, response, next) => {
   try {
@@ -114,23 +115,7 @@ gameRouter.post("/start", async (req, res, next) => {
   }
 });
 
-// Calculate the total amount of money of each player
-// const calculateScore = async (players) => {
-//   try {
-//     const playerNames = Object.keys(players)
-//     playerNames.map((player) => {
-//       players[player].money.map((m) => {
-//         return const playerMoney = m.reduce((val1, val2) => val1 + val2, 0);
-//
-//       })
-//     })
-
-//   } catch (e) {
-//     console.log(e.message)
-//   }
-// }
-
-const buildGameState = async (gameId, currentTurns, pass) => {
+const buildGameState = async (gameId, winner = null) => {
   try {
     console.log("--------- new game ------------");
     const sequelizeGame = await Game.findByPk(gameId, {
@@ -156,10 +141,6 @@ const buildGameState = async (gameId, currentTurns, pass) => {
 
     // console.log("NEW GAMESTATE VERSION!", formattedPlayers2["p2"].money);
 
-    const formattedPlayers = game.players.reduce((acc, p) => {
-      return { ...acc, [p.username]: p }; // { money: { 10: true, }, score: { 1: false, 2: true }}
-    }, {}); // { money: [10, 40, 100], score: [4] }
-
     const bidsPerPlayer = game.players.reduce((acc, p) => {
       return { ...acc, [p.username]: [] };
     }, {});
@@ -171,41 +152,51 @@ const buildGameState = async (gameId, currentTurns, pass) => {
       passed: false,
     }));
 
-    const turns = [...turnArray].sort((a, b) => Math.random() - 0.5);
+    // assuming I know who won lastWinner = 'p1'
+    let turns = [...turnArray].sort((a, b) => Math.random() - 0.5);
+
+    if (winner) {
+      const filtered = turns.filter((p) => p.username !== winner);
+      turns = [{ username: winner, passed: false }, ...filtered];
+    }
 
     // Pick next VALID card from deck
     const deck = await Deck.findOne({ where: { gameId }, raw: true });
     const cardTypes = Object.keys(deck);
-    const validCards = cardTypes.filter((t) => deck[t] && t !== "id");
+    const validCards = cardTypes.filter(
+      (t) => deck[t] && t !== "id" && t !== "gameId"
+    );
 
     const randomCard =
       validCards[Math.floor(Math.random() * validCards.length)];
 
-    // Create a new array to store all the special cards
-    // If the length of this array is 4 the game should end
+    // IS GAME ENDING??
+    if (randomCard === "divide" || randomCard.includes("multiply")) {
+      // I have to check if it's the last one
 
-    // const specialCards = (randomCard) => {
-    //   if (randomCard === "divide" || randomCard.includes("multiply")) {
-    //     const cardsArray = [...cardsArray, randomCard];
-    //     console.log("what is cardsArray", cardsArray);
-    //     if (cardsArray.length === 4) {
-    //       console.log("the game has ended")
-    //     }
-    //   }
-    // };
+      const cardTypes = Object.keys(deck);
+      const alreadyPlayed = cardTypes.filter(
+        (t) => (t === "divide" || t.includes("multiply")) && deck[t] === false
+      );
 
-    // Get all the special cards values <--- This probably doesn't work because the value of the card is only going to be set to false after someone won that card
+      if (alreadyPlayed.length === 3) {
+        // GAME END
+        const playerScores = calculateScores(formattedPlayers2);
+        console.log("what is playerScores?", playerScores);
 
-    // const specialCards = (({
-    //   divide,
-    //   multiplyFirst,
-    //   multiplySecond,
-    //   multiplyThird,
-    // }) => ({ divide, multiplyFirst, multiplySecond, multiplyThird }))(deck);
+        const winner = chooseWinner(playerScores);
 
-    // console.log("are these all specialCards?", specialCards); // {divide: true, multiplyFirst:true, multiplySecond: false, ...}
+        const results = {
+          playerScores,
+          winner,
+          status: "finished",
+        };
 
-    // const getSpecialCardsValue = Object.values(specialCards); // returns [true, true, false, true]
+        console.log("end state", results);
+
+        return results;
+      }
+    }
 
     const gameState = {
       gameId,
@@ -215,6 +206,7 @@ const buildGameState = async (gameId, currentTurns, pass) => {
       deck,
       turns: turns,
       currentCard: randomCard,
+      status: "playing",
     };
 
     console.log("in build function", gameState);
@@ -225,10 +217,99 @@ const buildGameState = async (gameId, currentTurns, pass) => {
   }
 };
 
+const chooseWinner = (playerScores) => {
+  // Determine the poorest player
+  const allPlayerTotalMoney = playerScores.map((player) => {
+    return player.totalMoney;
+  });
+
+  const checkLowestMoney = Math.min(...allPlayerTotalMoney);
+
+  const poorestPlayer = playerScores.find(
+    (p) => p.totalMoney === checkLowestMoney
+  );
+  console.log("this is the poorestPlayer", poorestPlayer);
+
+  const sorted = [...playerScores].sort((a, b) => b.endScore - a.endScore);
+
+  console.log("sorted by score", sorted);
+  // is [0] the winner?
+  const winner =
+    poorestPlayer.name !== sorted[0].name ? sorted[0].name : sorted[1].name;
+
+  return winner;
+};
+
+const calculateScores = (fullPlayers) => {
+  // { "matias": { money: [], score: [] }, fang: { money: [], score: [] }}
+  const toFilter = [
+    "divide",
+    "multiplyFirst",
+    "multiplySecond",
+    "multiplyThird",
+    "minusFive",
+    "discardPoints",
+  ];
+
+  const names = Object.keys(fullPlayers); // ["matias", "fang"]
+
+  const playerScores = names.map((n) => {
+    const money = fullPlayers[n].money;
+
+    const totalMoney = money.reduce((acc, m) => parseInt(acc) + parseInt(m), 0);
+    console.log("what is totalMoney?", totalMoney);
+
+    const score = fullPlayers[n].score;
+    console.log("what is score?", score);
+
+    // Checking special cards
+    // Calculating the amount of multiplyCards
+    const getMultiplyCards = score.filter((card) => card.includes("multiply"));
+    const multiplyCards = getMultiplyCards.length;
+    console.log("how many multiplyCards do I have", multiplyCards);
+
+    // Checking minusFive card
+    const hasMinusFive = score.includes("minusFive");
+
+    // Checking divide card
+    const hasDivide = score.includes("divide");
+
+    const basicPoints = score
+      .filter((s) => !toFilter.includes(s))
+      .reduce((acc, s) => parseInt(acc) + parseInt(s), 0); // this works
+
+    // Calculate the total score
+    let endScore = basicPoints;
+    if (hasMinusFive === true) {
+      endScore = endScore - 5;
+    }
+    if (multiplyCards !== 0) {
+      endScore = endScore * (multiplyCards * 2);
+    }
+    if (hasDivide === true) {
+      endScore = endScore / 2;
+    }
+
+    return {
+      name: n,
+      totalMoney,
+      basicPoints,
+      endScore,
+      hasMinusFive,
+      multiplyCards,
+      hasDivide,
+    };
+  });
+
+  console.log("what is the updated playerScores?", playerScores);
+  return playerScores;
+  // [{ name: 'matias', totalMoney: 0, basicPoints: 12 }, { name: 'matias', totalMoney: 0, basicPoints: 12 }
+};
+
 gameRouter.patch("/bid", async (request, response, next) => {
   try {
     const { bidState } = request.body;
-    console.log("what is in the bidState?", bidState);
+    // console.log("what is in the bidState?", bidState);
 
     // ---- shift and update passed -------------- //
     const currentTurns = bidState.turns; // [{username: "name", passed: false}, {username: "name", passed: false}, ...]
@@ -239,14 +320,22 @@ gameRouter.patch("/bid", async (request, response, next) => {
 
     const updated = { ...currentPlayer, passed: activeTurn.passed }; // Set first player passed value to 'true'
 
-    const updatedTurns = [...currentTurns, updated]; // Return new array with the updated passed value
+    // If the currentCard is a negative card the first player that passes gets it
+    // if (
+    //   (bidState.currentCard === "divide" || "minusFive" || "discardPoints") &&
+    //   currentPlayer.passed === true
+    // ) {
+    // }
+
+    let updatedTurns = [...currentTurns, updated]; // Return new array with the updated passed value
     // ------------------------------------------------ //
 
-    const turnsCheck = [...updatedTurns];
-    const nextPlayer = turnsCheck.shift();
+    let turnsCheck = [...updatedTurns];
+    let nextPlayer = turnsCheck.shift();
 
-    // end of round condition: TO-DO, NOT FINISHED
     const gameId = bidState.gameId;
+
+    const badCards = ["divide", "minusFive"];
     if (!nextPlayer.passed && turnsCheck.every((p) => p.passed)) {
       // next player hasn't passed, all the rest did => round finished, he gets the card.
       // request.io.to(roomId).send("new-round", {})
@@ -308,18 +397,60 @@ gameRouter.patch("/bid", async (request, response, next) => {
       );
 
       // 5. build new game state and start again
-      const nextRoundState = await buildGameState(gameId);
-      request.io.to(parseInt(gameId)).emit("gamestate", nextRoundState);
+      const nextRoundState = await buildGameState(gameId, winner.username);
+
+      if (nextRoundState.status === "finished") {
+        request.io.to(parseInt(gameId)).emit("finish-game", nextRoundState);
+
+        response.send("bid accepted");
+      } else {
+        request.io.to(parseInt(gameId)).emit("gamestate", nextRoundState);
+      }
     } else {
+      while (nextPlayer.passed && turnsCheck.some((p) => !p.passed)) {
+        turnsCheck = [...turnsCheck, nextPlayer];
+        nextPlayer = turnsCheck.shift();
+
+        // keep an updated version to return.
+        updatedTurns = [nextPlayer, ...turnsCheck];
+      }
+
       const toUpdate = {
         bids: bidState.bids,
         turns: updatedTurns,
       };
 
+      console.log("UPDATED TURNS", toUpdate);
+
       request.io.to(parseInt(gameId)).emit("new-bid", toUpdate);
     }
 
     response.send("bid accepted");
+  } catch (e) {
+    console.log(e.message);
+  }
+});
+
+gameRouter.post("/result", async (request, response, next) => {
+  try {
+    const { finalGameState } = request.body;
+    const gameId = finalGameState.gameId;
+    const players = finalGameState.players;
+    console.log("what is the finalGameState?", finalGameState);
+
+    // Check the money of each player
+
+    const playerNames = Object.values(players);
+    const playerName = playerNames.map((player) => {
+      return player;
+    });
+    const playerMoney = players[playerName].money;
+
+    console.log("what is playerMoney?", playerMoney);
+
+    console.log("what is playerName?", playerNames);
+
+    request.io.to(parseInt(gameId)).emit("game-results", results);
   } catch (e) {
     console.log(e.message);
   }

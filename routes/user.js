@@ -9,7 +9,7 @@ userRouter.post("/create", async (request, response, next) => {
       username,
       gameId,
     });
-    request.io.emit("new-player", createPlayer);
+    request.io.to(parseInt(gameId)).emit("new-player", createPlayer);
     response.send(createPlayer);
     // socket.emit.toRoom new-player
   } catch (e) {
