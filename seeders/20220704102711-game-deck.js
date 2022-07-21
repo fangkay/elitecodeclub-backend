@@ -23,8 +23,6 @@ module.exports = {
           multiplyThird: true,
           minusFive: true,
           discardPoints: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
         },
         {
           gameId: 2,
@@ -44,8 +42,6 @@ module.exports = {
           multiplyThird: true,
           minusFive: true,
           discardPoints: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
         },
         {
           gameId: 3,
@@ -65,8 +61,6 @@ module.exports = {
           multiplyThird: true,
           minusFive: true,
           discardPoints: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
         },
         {
           gameId: 4,
@@ -86,8 +80,6 @@ module.exports = {
           multiplyThird: true,
           minusFive: true,
           discardPoints: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
         },
         {
           gameId: 5,
@@ -107,8 +99,6 @@ module.exports = {
           multiplyThird: true,
           minusFive: true,
           discardPoints: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
         },
       ],
       {}

@@ -23,8 +23,6 @@ module.exports = {
           multiplyThird: false,
           minusFive: false,
           discardPoints: false,
-          createdAt: new Date(),
-          updatedAt: new Date(),
         },
         {
           playerId: 2,
@@ -44,8 +42,6 @@ module.exports = {
           multiplyThird: false,
           minusFive: false,
           discardPoints: false,
-          createdAt: new Date(),
-          updatedAt: new Date(),
         },
         {
           playerId: 3,
@@ -65,8 +61,6 @@ module.exports = {
           multiplyThird: false,
           minusFive: false,
           discardPoints: false,
-          createdAt: new Date(),
-          updatedAt: new Date(),
         },
         {
           playerId: 4,
@@ -86,8 +80,6 @@ module.exports = {
           multiplyThird: false,
           minusFive: false,
           discardPoints: false,
-          createdAt: new Date(),
-          updatedAt: new Date(),
         },
         {
           playerId: 5,
@@ -107,8 +99,6 @@ module.exports = {
           multiplyThird: false,
           minusFive: false,
           discardPoints: false,
-          createdAt: new Date(),
-          updatedAt: new Date(),
         },
         {
           playerId: 6,
@@ -128,8 +118,6 @@ module.exports = {
           multiplyThird: false,
           minusFive: false,
           discardPoints: false,
-          createdAt: new Date(),
-          updatedAt: new Date(),
         },
         {
           playerId: 7,
@@ -149,8 +137,6 @@ module.exports = {
           multiplyThird: false,
           minusFive: false,
           discardPoints: false,
-          createdAt: new Date(),
-          updatedAt: new Date(),
         },
         {
           playerId: 8,
@@ -170,8 +156,6 @@ module.exports = {
           multiplyThird: false,
           minusFive: false,
           discardPoints: false,
-          createdAt: new Date(),
-          updatedAt: new Date(),
         },
       ],
       {}
