@@ -11,7 +11,6 @@ userRouter.post("/create", async (request, response, next) => {
     });
     request.io.to(parseInt(gameId)).emit("new-player", createPlayer);
     response.send(createPlayer);
-    // socket.emit.toRoom new-player
   } catch (e) {
     console.log(e.message);
     next();
