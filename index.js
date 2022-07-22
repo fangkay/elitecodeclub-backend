@@ -5,6 +5,7 @@ const { Server } = require("socket.io");
 const cors = require("cors");
 const gameRouter = require("./routes/game");
 const userRouter = require("./routes/user");
+const port = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
@@ -40,6 +41,6 @@ app.use((req, res, next) => {
 app.use("/game", gameRouter);
 app.use("/user", userRouter);
 
-server.listen(3001, () => {
+server.listen(port, () => {
   console.log("Server is running");
 });
