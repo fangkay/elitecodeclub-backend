@@ -336,9 +336,16 @@ gameRouter.patch("/bid", async (request, response, next) => {
     const gameId = bidState.gameId;
 
     const badCards = ["divide", "minusFive"];
-    if (!nextPlayer.passed && turnsCheck.every((p) => p.passed)) {
+
+    // console.log("what is in turnsCheck", turnsCheck);
+
+    const onePlayerStillPlaying = updatedTurns.filter((p) => !p.passed);
+
+    if (onePlayerStillPlaying.length === 1) {
       // next player hasn't passed, all the rest did => round finished, he gets the card.
       // request.io.to(roomId).send("new-round", {})
+
+      const winnerName = onePlayerStillPlaying[0].username;
 
       // 1. remove card from the deck.
       const currentCard = bidState.currentCard;
@@ -355,7 +362,6 @@ gameRouter.patch("/bid", async (request, response, next) => {
       // ----  2. take money away from player ---- //
 
       // who is he
-      const winnerName = nextPlayer.username;
 
       const winner = await Player.findOne({
         where: {
