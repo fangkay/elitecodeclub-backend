@@ -14,10 +14,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: [
-      "https://62da8fa30bb2b809e3eefdc5--bidbybid.netlify.app",
-      "https://admin.socket.io/",
-    ],
+    origin: ["https://main--bidbybid.netlify.app/", "https://admin.socket.io/"],
     methods: ["GET", "POST"],
     allowedHeaders: ["my-custom-header"],
     credentials: true,
