@@ -19,6 +19,8 @@ const io = new Server(server, {
       "https://admin.socket.io/",
     ],
     methods: ["GET", "POST"],
+    allowedHeaders: ["my-custom-header"],
+    credentials: true,
   },
 });
 
